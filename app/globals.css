@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    /* Letra un poco más grande de lo habitual: la app la usan también los
+       padres, en el móvil. */
+    font-size: 17px;
+  }
+
+  body {
+    background-color: #2a0e13;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background: #a9b84e;
+    color: #1b080c;
+  }
+
+  :focus-visible {
+    outline: 2px solid #c9d56e;
+    outline-offset: 2px;
+  }
+
+  /* iOS hace zoom al tocar un campo con letra < 16px: se evita poniéndolos
+     todos a 16px como mínimo. */
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1rem);
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-corteza/80 border border-crema/10 rounded-2xl backdrop-blur-sm;
+  }
+
+  .campo {
+    @apply w-full rounded-xl border border-crema/15 bg-nogaldark/70 px-3 py-2.5 text-crema placeholder:text-crema/30 focus:border-miel focus:outline-none;
+  }
+
+  .etiqueta-campo {
+    @apply mb-1 block text-sm text-crema/70;
+  }
+
+  .boton {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-miel px-4 py-2.5 font-semibold text-nogaldark transition hover:bg-mielbrillante disabled:opacity-50;
+  }
+
+  .boton-secundario {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-crema/20 px-4 py-2.5 text-crema/90 transition hover:bg-crema/10 disabled:opacity-50;
+  }
+
+  .boton-peligro {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-coral/40 px-4 py-2.5 text-coral transition hover:bg-coral/10 disabled:opacity-50;
+  }
+
+  /* Ramas de un árbol "a tiza" muy tenues de fondo, fijas detrás del
+     contenido — el mismo recurso que el sol y la palmera de Tarados. */
+  .fondo-arbol {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1400'%3E%3Cg fill='none' stroke='%23F7EFE2' stroke-opacity='0.06' stroke-width='7' stroke-linecap='round'%3E%3Cpath d='M500 1400 C 490 1200 520 1050 500 900'/%3E%3Cpath d='M500 900 C 420 800 330 760 230 700'/%3E%3Cpath d='M500 900 C 590 800 680 760 780 690'/%3E%3Cpath d='M500 900 C 505 780 490 690 500 560'/%3E%3Cpath d='M230 700 C 180 620 170 560 130 480'/%3E%3Cpath d='M230 700 C 280 610 300 560 330 470'/%3E%3Cpath d='M780 690 C 830 610 840 550 880 470'/%3E%3Cpath d='M780 690 C 730 600 710 550 680 460'/%3E%3Cpath d='M500 560 C 440 480 420 430 400 350'/%3E%3Cpath d='M500 560 C 560 480 580 430 600 350'/%3E%3C/g%3E%3Cg fill='%23F7EFE2' fill-opacity='0.05'%3E%3Ccircle cx='130' cy='460' r='34'/%3E%3Ccircle cx='330' cy='450' r='34'/%3E%3Ccircle cx='880' cy='450' r='34'/%3E%3Ccircle cx='680' cy='440' r='34'/%3E%3Ccircle cx='400' cy='330' r='34'/%3E%3Ccircle cx='600' cy='330' r='34'/%3E%3Ccircle cx='500' cy='520' r='26'/%3E%3C/g%3E%3C/svg%3E");
+    background-position: center 90px;
+    background-size: min(720px, 96vw) auto;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+}

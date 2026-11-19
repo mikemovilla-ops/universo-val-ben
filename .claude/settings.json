@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/Valdun/Proyectos/**)",
+      "PowerShell(foreach \\($p in \"Cosas casa\",\"EuroAmigus\",\"Quiniela LaLiga\",\"Tarados Malibu\"\\) { \"=== $p\"; Get-ChildItem \"D:\\\\Valdun\\\\Proyectos\\\\$p\" -Force | Select-Object -ExpandProperty Name })",
+      "PowerShell(cd \"D:\\\\Valdun\\\\Proyectos\\\\Tarados Malibu\"; Get-Content package.json; Get-Content README.md; Get-Content vercel.json; Get-Content .env.example; Get-Content next.config.mjs; Get-Content tailwind.config.ts; Get-ChildItem -Recurse -File app,components,lib,types,prisma,scripts,public,.github,.claude | Where-Object { $_.FullName -notmatch 'node_modules' } | ForEach-Object { $_.FullName.Replace\\(\\(Get-Location\\).Path,''\\) + \"  \" + $_.Length })",
+      "Read(//c/Users/Usuario/.claude/**)",
+      "PowerShell(cd \"D:\\\\Valdun\\\\Proyectos\\\\Tarados Malibu\"; foreach \\($f in \"app/globals.css\",\"app/providers.tsx\",\"components/Navbar.tsx\",\"components/BottomNav.tsx\",\"components/Footer.tsx\",\"components/VersionPopup.tsx\",\"app/novedades/page.tsx\",\"components/Modal.tsx\",\"components/SeccionDesplegable.tsx\",\"components/EnlaceConCarga.tsx\",\"components/BotonEntrarGoogle.tsx\",\"lib/prisma.ts\",\"types/next-auth.d.ts\",\"scripts/dev.js\",\".github/workflows/ci.yml\",\"vitest.config.ts\",\"tsconfig.json\",\"postcss.config.mjs\",\".gitignore\"\\) { \"######## $f\"; Get-Content $f -Encoding UTF8 -Raw })",
+      "PowerShell(cd \"D:\\\\Valdun\\\\Proyectos\\\\Tarados Malibu\"; foreach \\($f in \"lib/email.ts\",\"app/api/partidos/[id]/foto/route.ts\",\"components/SubirFotoPartido.tsx\",\"lib/fechas.ts\"\\) { \"######## $f\"; Get-Content -LiteralPath $f -Encoding UTF8 -Raw }; \"######## schema head\"; Get-Content prisma/schema.prisma -Encoding UTF8 -TotalCount 80; cd ../EuroAmigus; \"######## Euro layout\"; Get-Content app/layout.tsx -Encoding UTF8 -Raw; Get-ChildItem app -File | Select Name; Get-ChildItem public | Select Name; Get-Content tailwind.config.ts -Raw)"
+    ]
+  }
+}

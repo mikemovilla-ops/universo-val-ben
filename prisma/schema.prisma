@@ -1,0 +1,250 @@
+// Esquema de Universo Val-Ben: árbol genealógico (personas, relaciones,
+// hitos y recuerdos), recetas (pedidas → en curso → listas) y álbum de fotos
+// con etiquetas de personas.
+// Modelos de NextAuth (User, Account, Session, VerificationToken) + modelos
+// propios de la familia.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Qué puede hacer cada persona en la app (además del admin, que va por
+// ADMIN_EMAILS y puede con todo):
+// PADRE: padre o madre — redacta recetas.
+// HIJO: hijo o hija — pide recetas y recibe el aviso cuando están listas.
+// FAMILIAR: el resto (cuñados, sobrinos, tíos...) — ve todo, sube fotos.
+// Rellenar hitos y recuerdos de alguien no depende del rol sino del árbol:
+// lo puede hacer la propia persona, sus progenitores y sus abuelos.
+enum RolFamilia {
+  PADRE
+  HIJO
+  FAMILIAR
+}
+
+enum EstadoReceta {
+  PEDIDA // en el backlog, nadie la ha empezado
+  EN_CURSO // un padre/madre la está redactando
+  LISTA // terminada, visible para todos
+}
+
+enum TipoRecuerdo {
+  ANECDOTA
+  CURIOSIDAD
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Un miembro de la familia, tenga cuenta o no (los abuelos o los sobrinos
+// pequeños están en el árbol aunque nunca entren). Quien tenga `email`
+// puede entrar con la cuenta de Google de ese email — es lo que une una
+// sesión con su persona (ver lib/auth.ts).
+model Persona {
+  id                 String     @id @default(cuid())
+  nombre             String
+  apellidos          String?
+  apodo              String? // si lo tiene, es el nombre que se ve en la app
+  email              String?    @unique // siempre en minúsculas
+  telefono           String?
+  fechaNacimiento    DateTime?  @db.Date
+  fechaFallecimiento DateTime?  @db.Date
+  lugarNacimiento    String?
+  fotoUrl            String?
+  sobreMi            String?
+  rol                RolFamilia @default(FAMILIAR)
+  // Los 5 de la familia (padres + 3 hijos): salen destacados en el árbol.
+  esNucleo           Boolean    @default(false)
+  // Avisos por email (recetas). Se puede poner un email distinto del de
+  // Google para recibirlos, o desactivarlos.
+  avisosEmail        Boolean    @default(true)
+  emailAvisos        String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  // Dos progenitores opcionales (sin distinguir padre/madre). Si uno se
+  // borra del árbol, el hijo se queda sin ese progenitor, no se borra.
+  progenitor1Id String?
+  progenitor2Id String?
+  progenitor1   Persona?  @relation("Progenitor1", fields: [progenitor1Id], references: [id], onDelete: SetNull)
+  progenitor2   Persona?  @relation("Progenitor2", fields: [progenitor2Id], references: [id], onDelete: SetNull)
+  hijosComo1    Persona[] @relation("Progenitor1")
+  hijosComo2    Persona[] @relation("Progenitor2")
+
+  // Pareja actual. Se guarda en los dos lados (A→B y B→A), lo mantiene la
+  // API al editar (ver app/api/personas).
+  parejaId String?
+  pareja   Persona?  @relation("Pareja", fields: [parejaId], references: [id], onDelete: SetNull)
+  parejaDe Persona[] @relation("Pareja")
+
+  hitos             Hito[]     @relation("HitosDe")
+  hitosEscritos     Hito[]     @relation("HitosAutor")
+  recuerdos         Recuerdo[] @relation("RecuerdosDe")
+  recuerdosEscritos Recuerdo[] @relation("RecuerdosAutor")
+  recetasPedidas    Receta[]   @relation("RecetaPedidaPor")
+  recetasRedactadas Receta[]   @relation("RecetaRedactor")
+  fotosSubidas      Foto[]
+  etiquetas         Etiqueta[]
+}
+
+// Un hito en la vida de alguien ("aprendió a nadar": "con 6 años, en
+// Benidorm"). Los predefinidos (lib/hitos.ts) llevan `clave` y salen en
+// todas las fichas listos para rellenar; los propios de cada persona no la
+// llevan (clave null, que en Postgres no choca con el @@unique).
+model Hito {
+  id        String   @id @default(cuid())
+  personaId String
+  clave     String?
+  titulo    String
+  valor     String // cuándo / cómo: texto libre ("1992", "con 11 meses")
+  detalle   String?
+  autorId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  persona Persona  @relation("HitosDe", fields: [personaId], references: [id], onDelete: Cascade)
+  autor   Persona? @relation("HitosAutor", fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@unique([personaId, clave])
+}
+
+model Recuerdo {
+  id        String       @id @default(cuid())
+  personaId String
+  tipo      TipoRecuerdo
+  texto     String
+  autorId   String?
+  createdAt DateTime     @default(now())
+
+  persona Persona  @relation("RecuerdosDe", fields: [personaId], references: [id], onDelete: Cascade)
+  autor   Persona? @relation("RecuerdosAutor", fields: [autorId], references: [id], onDelete: SetNull)
+}
+
+model Receta {
+  id          String       @id @default(cuid())
+  titulo      String
+  nota        String? // lo que pidió quien la pidió ("la de la abuela, con chorizo")
+  estado      EstadoReceta @default(PEDIDA)
+  categoria   String?
+  raciones    String?
+  tiempo      String?
+  consejos    String?
+  fotoUrl     String? // foto principal del plato
+  pedidaPorId String?
+  redactorId  String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  empezadaAt  DateTime?
+  terminadaAt DateTime?
+
+  pedidaPor    Persona?      @relation("RecetaPedidaPor", fields: [pedidaPorId], references: [id], onDelete: SetNull)
+  redactor     Persona?      @relation("RecetaRedactor", fields: [redactorId], references: [id], onDelete: SetNull)
+  ingredientes Ingrediente[]
+  pasos        Paso[]
+  fotos        FotoReceta[]
+}
+
+model Ingrediente {
+  id       String  @id @default(cuid())
+  recetaId String
+  orden    Int
+  cantidad String?
+  nombre   String
+
+  receta Receta @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+}
+
+model Paso {
+  id       String  @id @default(cuid())
+  recetaId String
+  orden    Int
+  texto    String
+  fotoUrl  String?
+
+  receta Receta @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+}
+
+// Fotos extra de una receta (además de la principal y las de cada paso).
+model FotoReceta {
+  id       String  @id @default(cuid())
+  recetaId String
+  orden    Int     @default(0)
+  url      String
+  pie      String?
+
+  receta Receta @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+}
+
+model Foto {
+  id          String    @id @default(cuid())
+  url         String
+  pie         String?
+  lugar       String?
+  fecha       DateTime? @db.Date
+  subidaPorId String?
+  createdAt   DateTime  @default(now())
+
+  subidaPor Persona?   @relation(fields: [subidaPorId], references: [id], onDelete: SetNull)
+  etiquetas Etiqueta[]
+
+  @@index([fecha])
+}
+
+model Etiqueta {
+  fotoId    String
+  personaId String
+
+  foto    Foto    @relation(fields: [fotoId], references: [id], onDelete: Cascade)
+  persona Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  @@id([fotoId, personaId])
+  @@index([personaId])
+}
